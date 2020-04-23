@@ -5,27 +5,36 @@ import classnames from "classnames";
 import Loading from "components/Loading";
 import Panel from "components/Panel";
 
+import { setInterview } from "helpers/reducers";
+import {
+  getTotalInterviews,
+  getLeastPopularTimeSlot,
+  getMostPopularDay,
+  getInterviewsPerDay
+ } from "helpers/selectors";
+
+ 
 //fake data, to be replaced later
 const data = [
   {
     id: 1,
     label: "Total Interviews",
-    value: 6
+    getValue: getTotalInterviews
   },
   {
     id: 2,
     label: "Least Popular Time Slot",
-    value: "1pm"
+    getValue: getLeastPopularTimeSlot
   },
   {
     id: 3,
     label: "Most Popular Day",
-    value: "Wednesday"
+    getValue: getMostPopularDay
   },
   {
     id: 4,
     label: "Interviews Per Day",
-    value: "2.3"
+    getValue: getInterviewsPerDay
   }
 ];
 
@@ -64,6 +73,16 @@ class Dashboard extends Component {
       });
     });
     
+    this.socket = new WebSocket(process.env.REACT_APP_WEBSOCKET_URL);
+    this.socket.onmessage = event => {
+      const data = JSON.parse(event.data);
+    
+      if (typeof data === "object" && data.type === "SET_INTERVIEW") {
+        this.setState(previousState =>
+          setInterview(previousState, data.id, data.interview)
+        );
+      }
+    };
   }
 
   componentDidUpdate(previousProps, previousState) {
@@ -72,6 +91,10 @@ class Dashboard extends Component {
     }
   }
   
+  componentWillUnmount() {
+    this.socket.close();
+  }
+
   render() {
     const dashboardClasses = classnames(
       "dashboard", {"dashboard--focused" : this.state.focused}
@@ -89,7 +112,7 @@ class Dashboard extends Component {
       <Panel 
         key={panel.id} 
         label={panel.label} 
-        value={panel.value}
+        value={panel.getValue(this.state)}
         onSelect={evt => this.selectPanel(panel.id)} 
       />
     )) 
